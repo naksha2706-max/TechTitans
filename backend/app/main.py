@@ -254,3 +254,33 @@ def get_checks(
     ).order_by(models.Check.created_at.desc()).all()
     
     return {"checks": checks}
+
+@app.post("/api/upi/check", response_model=schemas.UpiCheckResponse)
+def check_upi(
+    req: schemas.UpiCheckRequest,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    check_rate_limit(request)
+    from app import upi_detector
+    return upi_detector.analyze_upi_transaction(
+        upi_id=req.upi_id,
+        message_text=req.message_text or "",
+        amount=req.amount or "",
+        db=db
+    )
+
+@app.post("/api/whatsapp/message", response_model=schemas.WhatsAppMessageResponse)
+def handle_whatsapp_message(
+    req: schemas.WhatsAppMessageRequest,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    check_rate_limit(request)
+    from app import whatsapp_bot
+    return whatsapp_bot.process_whatsapp_message(
+        sender=req.sender or "student",
+        message_text=req.message_text,
+        db=db
+    )
+

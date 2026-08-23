@@ -5,6 +5,8 @@ import HistoryPage from './pages/HistoryPage.jsx'
 import ReportPage from './pages/ReportPage.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 import SignupPage from './pages/SignupPage.jsx'
+import WhatsAppBotPage from './pages/WhatsAppBotPage.jsx'
+import UpiCheckerPage from './pages/UpiCheckerPage.jsx'
 
 export default function App() {
   return (
@@ -12,17 +14,12 @@ export default function App() {
       <Navbar />
       <main>
         <Routes>
-          {/* Phase 2 — core scanner, no login required */}
           <Route path="/" element={<CheckPage />} />
-
-          {/* Phase 3 — reporting */}
+          <Route path="/upi-check" element={<UpiCheckerPage />} />
+          <Route path="/whatsapp" element={<WhatsAppBotPage />} />
           <Route path="/report" element={<ReportPage />} />
-
-          {/* Phase 1 — auth */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
-
-          {/* Phase 2 — history, requires login (guarded inside the page) */}
           <Route path="/history" element={<HistoryPage />} />
         </Routes>
       </main>

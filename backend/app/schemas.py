@@ -66,3 +66,26 @@ class CheckHistoryItem(BaseModel):
 
 class HistoryResponse(BaseModel):
     checks: List[CheckHistoryItem]
+
+# --- UPI Detector ---
+class UpiCheckRequest(BaseModel):
+    upi_id: str
+    message_text: Optional[str] = ""
+    amount: Optional[str] = ""
+
+class UpiCheckResponse(BaseModel):
+    upi_id: str
+    risk_score: int
+    risk_band: str
+    warnings: List[WarningDetail]
+    recommendation: str
+
+# --- WhatsApp Bot ---
+class WhatsAppMessageRequest(BaseModel):
+    sender: Optional[str] = "student"
+    message_text: str
+
+class WhatsAppMessageResponse(BaseModel):
+    reply: str
+    evaluation: Optional[dict] = None
+

@@ -9,8 +9,10 @@ export default function Navbar() {
     <nav className="navbar">
       <Link to="/" className="navbar-brand">ScamCheck</Link>
       <div className="navbar-links">
-        <Link to="/">Check an opportunity</Link>
-        <Link to="/report">Report a scam</Link>
+        <Link to="/">Check Opportunity</Link>
+        <Link to="/upi-check">💳 UPI Scam Check</Link>
+        <Link to="/whatsapp">🤖 WhatsApp Bot</Link>
+        <Link to="/report">Report Scam</Link>
         {loggedIn ? (
           <>
             <Link to="/history">My history</Link>
