@@ -36,6 +36,7 @@ class ScamReport(Base):
     contact_email_hash = Column(String, nullable=True)
     contact_phone_hash = Column(String, nullable=True)
     contact_upi_hash = Column(String, nullable=True)
+    confirm_count = Column(Integer, nullable=False, default=1)
     status = Column(String, nullable=False, default="pending")
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 

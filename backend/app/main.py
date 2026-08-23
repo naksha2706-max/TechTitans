@@ -284,3 +284,46 @@ def handle_whatsapp_message(
         db=db
     )
 
+@app.post("/api/analyze/document", response_model=schemas.DocumentAnalyzeResponse)
+def analyze_document(
+    req: schemas.DocumentAnalyzeRequest,
+    request: Request
+):
+    check_rate_limit(request)
+    from app import offer_letter_analyzer
+    return offer_letter_analyzer.analyze_offer_letter(
+        document_text=req.document_text,
+        filename=req.filename or "offer_letter.pdf"
+    )
+
+@app.get("/api/fingerprints/search", response_model=schemas.FingerprintSearchResponse)
+def search_fingerprint_db(
+    query: Optional[str] = "",
+    db: Session = Depends(get_db)
+):
+    from app import fingerprint_engine
+    return fingerprint_engine.search_fingerprints(query=query or "", db=db)
+
+@app.get("/api/reports/feed", response_model=schemas.CommunityFeedResponse)
+def get_community_feed(
+    db: Session = Depends(get_db)
+):
+    reports = db.query(models.ScamReport).order_by(
+        models.ScamReport.created_at.desc()
+    ).limit(30).all()
+    return {"reports": reports}
+
+@app.post("/api/reports/{report_id}/confirm")
+def confirm_report(
+    report_id: str,
+    db: Session = Depends(get_db)
+):
+    report = db.query(models.ScamReport).filter(models.ScamReport.id == report_id).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+    
+    report.confirm_count += 1
+    db.commit()
+    return {"id": report.id, "confirm_count": report.confirm_count}
+
+

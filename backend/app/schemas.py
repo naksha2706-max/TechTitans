@@ -89,3 +89,35 @@ class WhatsAppMessageResponse(BaseModel):
     reply: str
     evaluation: Optional[dict] = None
 
+# --- Document Analysis ---
+class DocumentAnalyzeRequest(BaseModel):
+    document_text: str = Field(..., max_length=10000)
+    filename: Optional[str] = "offer_letter.pdf"
+
+class DocumentAnalyzeResponse(BaseModel):
+    filename: str
+    risk_score: int
+    risk_band: str
+    warnings: List[WarningDetail]
+    recommendation: str
+
+# --- Community Feed & Fingerprints ---
+class CommunityFeedItem(BaseModel):
+    id: UUID
+    company_name: Optional[str] = None
+    description: str
+    confirm_count: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class CommunityFeedResponse(BaseModel):
+    reports: List[CommunityFeedItem]
+
+class FingerprintSearchResponse(BaseModel):
+    query: str
+    matches_found: int
+    fingerprints: List[dict]
+
+
