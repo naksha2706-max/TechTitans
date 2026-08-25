@@ -1,76 +1,58 @@
-# ScamCheck — Internship Scam Detection Platform
+# ai-service/
 
-A tool that lets students paste or upload a job/internship opportunity
-(message, company details, salary, website) and get back a **risk score**
-with clear warning indicators and a recommendation — so they can tell a
-genuine offer from a scam before they pay money or share personal info.
+Standalone microservice, called by `backend/` over HTTP. Keeps scoring logic
+swappable without redeploying the main API.
 
-## Project status
-
-This repo is scoped as an **MVP first, roadmap second**. Do not attempt to
-build every feature in `docs/PRD.md` at once — follow the phases in
-`docs/IMPLEMENTATION_PLAN.md` in order. Phase 1 is a fully working
-rule-based scanner with no AI/ML dependency; everything after that is a
-stretch goal layered on top of a working product.
-
-## 🔑 Key Features
-
-| **Feature**                          | **What It Does**                                                                                               | **Impact**                                         |
-| ------------------------------------ | -------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
-| 🧠 **AI Scam Detection**             | Analyzes internship messages and identifies suspicious language, payment requests, and scam patterns.          | Detects threats early.                             |
-| 🧬 **Scam Fingerprint Database**     | Stores unique fingerprints of reported scams using phone numbers, UPI IDs, emails, URLs, and message patterns. | Recognizes reused scams.                           |
-| 🤝 **Crowdsourced Reporting**        | Allows students to report suspicious recruiters, offers, websites, and payment details.                        | Builds collective scam intelligence.               |
-| ⭐ **Recruiter & Company Reputation** | Maintains trust/risk profiles based on verified student experiences and previous reports.                      | Helps students make informed decisions.            |
-| 💳 **UPI Reputation Check**          | Checks whether payment identifiers have been previously reported for scams.                                    | Prevents fraudulent payments.                      |
-| 🔗 **Cross-Platform Correlation**    | Connects the same phone, UPI, email, or recruiter across WhatsApp, Telegram, Instagram, and job platforms.     | Exposes repeated scam campaigns.                   |
-| 📄 **Offer Letter Analysis**         | Uses OCR and image analysis to examine uploaded offer letters/certificates.                                    | Detects suspicious documents and reused templates. |
-| 🌐 **Website & Domain Intelligence** | Checks domain age, SSL status, and website-related risk signals.                                               | Identifies suspicious recruitment websites.        |
-| 📊 **Intelligent Risk Score**        | Combines multiple signals into a 0–100 risk score with reasons.                                                | Provides clear, evidence-based warnings.           |
-| 🤖 **WhatsApp Scam Bot**             | Students can forward suspicious messages directly to the bot for analysis.                                     | Makes detection quick and frictionless.            |
-| 🌐 **Chrome Extension**              | Scans internship/job listings and displays a risk badge while browsing.                                        | Provides protection at the point of discovery.     |
-| 🔄 **Continuous Learning**           | Uses validated reports and new scam patterns to improve future detection.                                      | Makes the system stronger over time.               |
-
-
-## Structure
-
-```text
-internship-scam-detector/
-├── AGENTS.md                 ← read this first if you are an AI coding agent
-├── README.md                 ← you are here
-│
-├── docs/
-│   ├── PRD.md                 Product requirements (full vision + MVP cut)
-│   ├── TRD.md                 Technical stack decisions
-│   ├── SYSTEM_ARCHITECTURE.md Component diagram, MVP vs later phases
-│   ├── DATABASE_DESIGN.md     Tables/fields for MVP + future phases
-│   ├── API_SPECIFICATION.md   Endpoints, request/response, errors
-│   ├── FEATURE_SPECIFICATION.md  Exact behavior of every feature
-│   ├── SECURITY_DESIGN.md     Hashing, auth, abuse prevention, liability
-│   └── IMPLEMENTATION_PLAN.md Build phases in order
-│
-├── frontend/       React app (student-facing form + results)
-├── backend/        FastAPI service (scoring engine, APIs, DB access)
-├── ai-service/      Phase 4+: NLP classifier, OCR, embeddings (not MVP)
-└── database/       Migrations / seed data
-```
-
-## Getting started (Phase 1 MVP)
+## Run locally
 
 ```bash
-# backend
-cd backend
-python -m venv venv && source venv/bin/activate
-pip install fastapi uvicorn sqlalchemy psycopg2-binary
-uvicorn main:app --reload
-
-# frontend
-cd frontend
-npm install
-npm run dev
+cd ai-service
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8100
 ```
 
-## For AI coding agents (Antigravity, Claude Code, etc.)
+Test it:
 
-Read `AGENTS.md`, then `docs/PRD.md` (MVP section only), then
-`docs/IMPLEMENTATION_PLAN.md`. Do not start on Phase 2+ features until
-Phase 1 is fully working and tested.
+```bash
+curl -X POST http://localhost:8100/score \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Congratulations! Pay Rs 499 registration fee to confirm your work from home job. Hurry, limited seats!", "company_name": ""}'
+```
+
+## What's implemented (Phase 1-2)
+
+`app/rules/scorer.py` — pure rule-based scoring, no ML, fully explainable.
+Weights live in `app/rules/config.py`. **Align these with
+`docs/FEATURE_SPECIFICATION.md` exactly** — that doc is the spec, this file
+is the implementation, they must not drift apart.
+
+## What's deliberately NOT implemented yet
+
+- `app/llm/llm_scorer.py` — Phase 3 stub. Few-shot LLM scoring as a
+  secondary opinion alongside the rule engine, not a replacement. Disabled
+  by default (`AI_SERVICE_LLM_ENABLED=false`). Raises `NotImplementedError`
+  if you try to call it before wiring in a real LLM client — this is
+  intentional, so nobody accidentally ships fake confidence scores.
+- A trained classifier (Phase 4). **Precondition before building this:**
+  `training_examples` (see `database/migrations/0003_ai_ml_future.sql`)
+  needs a meaningful number of real, non-synthetic rows sourced from actual
+  `reports` submissions — not just the ~10 synthetic seed rows. There's no
+  hard number that makes a classifier suddenly valid, but low hundreds of
+  real labeled examples, roughly balanced between scam/legit, is a
+  reasonable floor. Below that, a trained model is just overfitting to
+  noise while looking more sophisticated than the rule engine it's supposed
+  to improve on.
+- Image similarity / fake letterhead matching. Same precondition problem,
+  worse — you need actual fake letters to compare against, which you won't
+  have until reports start including screenshots. OCR-then-run-through-
+  the-existing-rule-engine is the honest interim version (extract text,
+  reuse `scorer.py`, no new model needed).
+
+## Why rules first, not a model
+
+The scorer is a pure function (`score_message`) with no network or DB calls
+inside it — every input it needs (domain age, reputation hit) is computed
+elsewhere and passed in. That makes it trivial to unit test and to swap
+later: the LLM/classifier layers can be added as *additional* fields on the
+response without touching this function.
